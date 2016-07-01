@@ -16,7 +16,7 @@
 #include <math.h>
 
 // <Device Information>
-#define FW_VERSION "2.5.5" // Universal for AVR and ARM
+#define FW_VERSION "2.5.6" // Universal for AVR and ARM
 #define BOARD_REVISION "r2.5" // minimum MightyWatt board revision for this sketch is 2.4
 #define DVM_INPUT_RESISTANCE 330000 // differential input resistance
 // </Device Information>
@@ -306,6 +306,10 @@ void controlLoop()
       {
         MPPTAction = MPPT_CURRENT_UP;
       }
+      else if (voltage == 0)
+      {
+        MPPTAction = MPPT_CURRENT_DOWN;
+      }
       else if (MPPTAction != MPPTPreviousAction) // different former actions - choose the one that led to more favourable outcome
       {
         if (power + previousPreviousPower < 2 * previousPower)
@@ -329,10 +333,18 @@ void controlLoop()
       if (MPPTAction == MPPT_CURRENT_UP)
       {
         plusCurrent();    
+        if (MPPTAction == MPPTPreviousAction)
+        {
+          plusCurrent(); 
+        }
       }
       else
       {
         minusCurrent();
+        if (MPPTAction == MPPTPreviousAction)
+        {
+          minusCurrent(); 
+        }
       }
 
       MPPTPreviousAction = action;

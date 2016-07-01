@@ -16,7 +16,7 @@
 #include <math.h>
 
 // <Device Information>
-#define FW_VERSION "2.5.5" // Universal for AVR and ARM
+#define FW_VERSION "2.5.6" // Universal for AVR and ARM
 #define BOARD_REVISION "r2.5" // minimum MightyWatt board revision for this sketch is 2.4
 #define DVM_INPUT_RESISTANCE 330000 // differential input resistance
 // </Device Information>
@@ -38,12 +38,12 @@ const byte DAC_WRITE_DAC_AND_INPUT_REGISTERS = 0b00110000; // write to DAC memor
 //  value
 unsigned int dac = 0;
 //  calibration
-const unsigned int IDAC_SLOPE = 10122;
-const int IDAC_INTERCEPT = -19;
-const unsigned int VDAC0_SLOPE = 31445;
-const int VDAC0_INTERCEPT = -25;
-const unsigned int VDAC1_SLOPE = 5426;
-const int VDAC1_INTERCEPT = -22;
+const unsigned int IDAC_SLOPE = 10405;
+const int IDAC_INTERCEPT = 4;
+const unsigned int VDAC0_SLOPE = 31941;
+const int VDAC0_INTERCEPT = 1;
+const unsigned int VDAC1_SLOPE = 5519;
+const int VDAC1_INTERCEPT = 2;
 // </DAC>
 
 // <Serial>
@@ -86,10 +86,10 @@ byte vRange = 0; // 0 = gain 1, 1 = gain 5.7
 //  hysteresis
 unsigned int voltageRangeDown; // switch gain when going under
 // calibration constants
-const unsigned int VADC0_SLOPE = 31614;
-const unsigned int VADC1_SLOPE = 5446;
-const int VADC0_INTERCEPT = 58;
-const int VADC1_INTERCEPT = -2;
+const unsigned int VADC0_SLOPE = 31678;
+const unsigned int VADC1_SLOPE = 5453;
+const int VADC0_INTERCEPT = 94;
+const int VADC1_INTERCEPT = 17;
 // serial communication
 byte remoteStatus = 0; // 0 = local, 1 = remote
 const byte REMOTE_ID = 29;
@@ -98,7 +98,7 @@ const byte REMOTE_ID = 29;
 // <Ammeter>
 unsigned int current = 0;
 //  calibration constants
-const unsigned int IADC_SLOPE = 10134;
+const unsigned int IADC_SLOPE = 10462;
 const char IADC_INTERCEPT = 26;
 // </Ammeter>
 
@@ -306,6 +306,10 @@ void controlLoop()
       {
         MPPTAction = MPPT_CURRENT_UP;
       }
+      else if (voltage == 0)
+      {
+        MPPTAction = MPPT_CURRENT_DOWN;
+      }
       else if (MPPTAction != MPPTPreviousAction) // different former actions - choose the one that led to more favourable outcome
       {
         if (power + previousPreviousPower < 2 * previousPower)
@@ -329,10 +333,18 @@ void controlLoop()
       if (MPPTAction == MPPT_CURRENT_UP)
       {
         plusCurrent();    
+        if (MPPTAction == MPPTPreviousAction)
+        {
+          plusCurrent(); 
+        }
       }
       else
       {
         minusCurrent();
+        if (MPPTAction == MPPTPreviousAction)
+        {
+          minusCurrent(); 
+        }
       }
 
       MPPTPreviousAction = action;
@@ -525,8 +537,8 @@ void plusCurrent()
   if (dac < 4095)
   {
     dac++;
+    setDAC();
   }
-  setDAC();
 }
 
 void minusCurrent()
@@ -534,8 +546,8 @@ void minusCurrent()
   if (dac > 0)
   {
     dac--;
+    setDAC();
   }
-  setDAC();
 }
 
 void setV(unsigned int value)
