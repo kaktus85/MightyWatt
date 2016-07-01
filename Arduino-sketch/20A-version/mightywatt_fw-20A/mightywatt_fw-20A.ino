@@ -537,8 +537,8 @@ void plusCurrent()
   if (dac < 4095)
   {
     dac++;
+    setDAC();
   }
-  setDAC();
 }
 
 void minusCurrent()
@@ -546,8 +546,8 @@ void minusCurrent()
   if (dac > 0)
   {
     dac--;
+    setDAC();
   }
-  setDAC();
 }
 
 void setV(unsigned int value)
