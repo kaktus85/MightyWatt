@@ -1,0 +1,45 @@
+Change log for MightyWatt revision 2
+==========================
+1.3.0.0		2016-08-20
+- Added compatibility with Arduino Zero (M0/M0 Pro)
+- Added automatic checking of firmware version
+- Serial port library now uses kernel32.dll calls
+==========================
+1.2.4.0		2016-06-08
+- Added new mode – maximum power point tracker
+- Added link to resource page for easier access to latest software
+==========================
+1.2.3.0		2015-12-11
+- Added support for series resistance in 4-wire mode to recalculate the available power dissipation.
+- Updated communication logic to work with FW 2.5.2.
+==========================
+1.2.2.0		2015-09-10
+- Added support for inverted phase voltage mode.
+- Added skip conditions for program items.
+- Added context menu to program list.
+- XML has been reworked a bit (NOT backwards compatible).
+- Updated communication logic to work with FW 2.5.1.
+==========================
+1.1.0.1		2015-05-18
+- Minor performance improvement for COM port listings.
+==========================
+1.1.0.0		2015-05-17
+- Application has been partially rewritten and source code has been fitted with more comments. 
+- Users can now skip a single program item.
+- The currently running program item is highlighted in list box.
+- Application now shows countdown timer in program mode with total remaining time and current item remaining time.
+- COM ports have more description and are automatically updated.
+- XML file stores also remote/local information and logging period settings. When using Replace command, the data from XML file overwrites the current settings. When using Add command, only program items are added.
+==========================
+1.0.1.1		2015-03-21
+First three rows begin with # to enable easier automatic processing. Data log now contains remote/local indication.
+==========================
+1.0.1.0		2015-03-07
+Removed temperature threshold control. Added possibility of loops for Program. Program items can now be saved and loaded to/from a XML file. About page slightly modified.
+==========================
+1.0.0.3		2014-07-22
+Changed numeral representation to have 3 decimal places instead of 2.
+==========================
+1.0.0.2		2014-06-29
+Base version.
+==========================
