@@ -1,46 +1,59 @@
 // IMPORTANT!
 // UNCOMMENT THE LINE THAT BELONGS TO YOUR ARDUINO VERSION, COMMENT THE OTHER LINE
-//#define ARM // Arduino Due and similar ATSAM (32bit) based boards
-#define AVR // Arduino Uno and similar AVR (8bit) based boards
+// If you are using Arduino Zero (M0/M0 Pro), the sketch was tested with Arduino.org board and version of IDE.
+//#define ZERO // Arduino Zero, M0 and M0 Pro (Cortex M0+, 32-bit) via Native port (USB)
+#define UNO // Arduino Uno (UNO, 8-bit)
+//#define DUE // Arduino Due (Cortex M3, 32-bit) via Programming port (USB)
 
 // WARNING!
 // TO MAKE THE MIGHTYWATT WORKING ON ARDUINO DUE, YOU MUST HAVE THE JUMPER ON DUE SET FOR EXTERNAL ANALOG REFERENCE
 
 #include <Wire.h>
-#ifdef AVR
-  #define I2C Wire
+#if defined(ZERO) || defined(UNO)
+  #define I2C Wire  
 #endif
-#ifdef ARM
+#ifdef DUE
   #define I2C Wire1
 #endif
+#ifdef ZERO
+  #define SerialPort SerialUSB
+#endif
+#if defined(UNO) || defined(DUE)
+  #define SerialPort Serial
+#endif
 
-// calibration procedure for FW_VERSION 2.3.1 and higher
+// calibration procedure for FW_VERSION 2.5.7 and higher
 
 // <Pins>
-const int REMOTE_PIN = 2;
-const int CV_PIN = 3;
-const int V_GAIN_PIN = 4;
-const int ADC_I_PIN = A1;
-const int ADC_V_PIN = A2;
+const int16_t REMOTE_PIN = 2;
+const int16_t CV_PIN = 3;
+const int16_t V_GAIN_PIN = 4;
+const int16_t ADC_I_PIN = A1;
+const int16_t ADC_V_PIN = A2;
 // </Pins>
 
 // <DAC>
 //  commands
-const byte DAC_ADDRESS = 0b1001100; // I2C address of DAC (A0 tied to GND)
-const byte DAC_WRITE_DAC_AND_INPUT_REGISTERS = 0b00110000; // write to DAC memory 
+const uint8_t DAC_ADDRESS = 0b1001100; // I2C address of DAC (A0 tied to GND)
+const uint8_t DAC_WRITE_DAC_AND_INPUT_REGISTERS = 0b00110000; // write to DAC memory 
 //  value
-unsigned int dac = 0;
+uint16_t dac = 0;
 // </DAC>
 
 void setup()
 {      
   delay(100);
-  Serial.begin(115200);
-  #ifdef AVR
+  SerialPort.begin(115200);
+  #ifdef ZERO
+    analogReference(AR_EXTERNAL);
+  #endif
+  #ifdef UNO
     analogReference(EXTERNAL);
-  #endif  
-  #ifdef ARM
+  #endif
+  #ifdef DUE
     ADC->ADC_MR |= (0b1111 << 24); // set maximum ADC tracking time
+  #endif
+  #if defined(ZERO) || defined(DUE)
     analogReadResolution(12);
   #endif
   pinMode(REMOTE_PIN, OUTPUT);
@@ -50,8 +63,13 @@ void setup()
   digitalWrite(V_GAIN_PIN, LOW);
   digitalWrite(CV_PIN, LOW);
   I2C.begin();  
-  unsigned int adc;
-  int command = 0;
+  uint16_t adc;
+  int16_t command = 0;
+  
+  // give time to open serial monitor - Zero does not reset connection on monitor opening
+  #ifdef ZERO
+    delay(6000);
+  #endif
   
   // UNCOMMENT SECTION 1–3 FOR CALIBRATION  
   
@@ -61,19 +79,18 @@ void setup()
   // Make your own calibration points, 5–10 points is enough.
   
   /*
-  Serial.println("dac\tadc");
-  delay(100);
-  for (int i = 41 ; i <= 4054; i = i + 800) // 6 calibration points
+  SerialPort.println("dac\tadc");  
+  for (int16_t i = 41 ; i <= 4054; i = i + 800) // 6 calibration points
   {    
     dac = i;
     setDAC();
     delay(300); // equilibrate
     adc = readADC12bit(ADC_I_PIN);
-    Serial.print(dac);
-    Serial.print("\t");
-    Serial.println(adc);
-    while(Serial.available() == 0){}
-    Serial.read();   // wait for keypress to increase current
+    SerialPort.print(dac);
+    SerialPort.print("\t");
+    SerialPort.println(adc);
+    while(SerialPort.available() == 0){}
+    SerialPort.read();   // wait for keypress to increase current
   }  
   dac = 0;
   setDAC();
@@ -89,14 +106,14 @@ void setup()
   /*
   dac = 0;
   setDAC();  
-  Serial.println("adc");
+  SerialPort.println("adc");
   while (command != 'q') // press 'q' to quit calibration
   {
     delay(300);
     adc = readADC12bit(ADC_V_PIN);
-    Serial.println(adc);
-    while(Serial.available() == 0){}
-    command = Serial.read(); // wait for keypress
+    SerialPort.println(adc);
+    while(SerialPort.available() == 0){}
+    command = SerialPort.read(); // wait for keypress
     if (command == '0')
     {
       digitalWrite(V_GAIN_PIN, LOW); // press '0' for no gain (full voltage scale)
@@ -115,20 +132,20 @@ void setup()
   // Make two sets of measurements, each with 5–10 points, for both voltage gain settings.
   
   /*
-  // digitalWrite(REMOTE_PIN, HIGH); // uncomment to enable remote (4-electrode) measurement
+  digitalWrite(REMOTE_PIN, HIGH); // uncomment to enable remote (4-electrode) measurement
   digitalWrite(CV_PIN, HIGH);
   digitalWrite(V_GAIN_PIN, LOW); // uncomment for no voltage gain (full scale voltage)
-  // digitalWrite(V_GAIN_PIN, HIGH); // uncomment for voltage gain
-  Serial.println("dac");
+  //digitalWrite(V_GAIN_PIN, HIGH); // uncomment for voltage gain
+  SerialPort.println("dac");
   delay(300);
-  for (int i = 4054; i >= 41; i = i - 800) // 6 calibration points
+  for (int16_t i = 4054; i >= 41; i = i - 800) // 6 calibration points
   {    
     dac = i;
     setDAC();
     delay(300); // equilibrate
-    Serial.println(dac);
-    while(Serial.available() == 0){}
-    Serial.read(); // wait for keypress to decrease voltage
+    SerialPort.println(dac);
+    while(SerialPort.available() == 0){}
+    SerialPort.read(); // wait for keypress to decrease voltage
   }  
   dac = 0;
   setDAC();
@@ -150,18 +167,21 @@ void setDAC() // sets value to DAC
   delayMicroseconds(8); // settling time  
 }
 
-unsigned int readADC12bit(int channel) // oversamples ADC to 12 bit (AVR) or averages 16 samples (ARM)
+uint16_t readADC12bit(int16_t channel) // oversamples ADC to 12 bit (AVR) or averages 16 samples (ARM)
 {  
-  byte i;
-  unsigned int analogResult = 0;
+  uint8_t i;
+  uint16_t analogResult = 0;
+  #if defined(ZERO) || defined(DUE)
+    delayMicroseconds(1000);
+  #endif
   for (i = 0; i < 16; i++)
   {
     analogResult += analogRead(channel);
-  }
-  #ifdef AVR
-    return (analogResult >> 2);
-  #endif
-  #ifdef ARM
+  }  
+  #if defined(ZERO) || defined(DUE)
     return (analogResult >> 4);
+  #endif
+  #ifdef UNO
+    return (analogResult >> 2);
   #endif
 }

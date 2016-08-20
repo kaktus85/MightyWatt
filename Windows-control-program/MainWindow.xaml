@@ -11,7 +11,10 @@
             <StatusBarItem Content="Not connected" HorizontalAlignment="Right" Name="statusBarConnection" />
         </StatusBar>
         <Menu Height="23" Name="menuTop" VerticalAlignment="Top">
-            <MenuItem Header="Connection" Name="menuItemConnection" MouseEnter="menuItemConnection_MouseEnter" />
+            <MenuItem Header="Connection" Name="menuItemConnection" MouseEnter="menuItemConnection_MouseEnter" >
+                <MenuItem x:Name="menuItemConnectionZero" Header="Arduino Zero (native port)"/>
+                <MenuItem x:Name="menuItemConnectionUno" Header="Arduino Uno &amp; Due (programming port)"/>
+            </MenuItem>
             <MenuItem Header="Program items" Name="menuItemExperiment">
                 <MenuItem Header="Save" Name="menuItemExperimentSave" Click="menuItemExperimentSave_Click" />
                 <Separator></Separator>

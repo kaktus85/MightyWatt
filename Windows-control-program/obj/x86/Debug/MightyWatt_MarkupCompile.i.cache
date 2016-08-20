@@ -4,17 +4,17 @@
 winexe
 C#
 .cs
-C:\Users\jpolonsky\Desktop\MightyWatt\C#\1.2.4.0\obj\x86\Debug\
+C:\Users\kaktus\Desktop\COM\Windows-control-program\obj\x86\Debug\
 MightyWatt
 none
 false
 DEBUG;TRACE
-C:\Users\jpolonsky\Desktop\MightyWatt\C#\1.2.4.0\App.xaml
+C:\Users\kaktus\Desktop\COM\Windows-control-program\App.xaml
 52122535492
 
-16-739413267
-151098548957
+201745073522
+151985928649
 About.xaml;DeviceInfo.xaml;LogSettings.xaml;MainWindow.xaml;SeriesResistance.xaml;
 
-True
+False
 

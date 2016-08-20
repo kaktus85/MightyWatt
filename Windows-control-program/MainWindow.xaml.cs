@@ -504,23 +504,34 @@ namespace MightyWatt
         // shows all available COM ports; invokes WMI
         private void menuItemConnection_MouseEnter(object sender, MouseEventArgs e)
         {
-            menuItemConnection.Items.Clear(); // clears the menu
-            MenuItem item;
+            menuItemConnectionUno.Items.Clear(); // clears the menu
+            menuItemConnectionZero.Items.Clear(); // clears the menu
+            MenuItem[] item;
             foreach (COMPortInfo comPort in COMPortInfo.GetCOMPortsInfo())
             {
-                item = new MenuItem();
-                item.Header = comPort.Description;
-                item.IsCheckable = true;
+                item = new MenuItem[2];
+                item[0] = new MenuItem();
+                item[1] = new MenuItem();
+                item[0].Header = comPort.Description;
+                item[1].Header = comPort.Description;
+                item[0].Tag = Boards.Zero;
+                item[1].Tag = Boards.Uno;
+                item[0].IsCheckable = true;
+                item[1].IsCheckable = true;
                 if (comPort.Name == load.PortName)
-                {
-                    item.IsChecked = true;
+                {                    
+                    item[0].IsChecked = true;
+                    item[1].IsChecked = true;
                 }
                 else
                 {
-                    item.IsChecked = false;
+                    item[0].IsChecked = false;
+                    item[1].IsChecked = false;
                 }
-                menuItemConnection.Items.Add(item);
-                item.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(menuItemConnection_Click));
+                menuItemConnectionZero.Items.Add(item[0]);
+                menuItemConnectionUno.Items.Add(item[1]);                
+                item[0].AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(menuItemConnection_Click));
+                item[1].AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(menuItemConnection_Click));
             }
         }
 
@@ -528,14 +539,17 @@ namespace MightyWatt
         private void menuItemConnection_Click(object sender, RoutedEventArgs e)
         {
             string selectedPort = string.Empty;
-            foreach (MenuItem menuItem in menuItemConnection.Items)
-            {
-                if (menuItem.Equals(sender))
-                {
-                    selectedPort = menuItem.Header.ToString().Substring(menuItem.Header.ToString().LastIndexOf("(COM")).Replace("(", string.Empty).Replace(")", string.Empty).Trim();
-                    break;
-                }
-            }
+            selectedPort = ((MenuItem)sender).Header.ToString().Substring(((MenuItem)sender).Header.ToString().LastIndexOf("(COM")).Replace("(", string.Empty).Replace(")", string.Empty).Trim();
+            Boards selectedBoard = (Boards)(((MenuItem)sender).Tag);
+
+            //foreach (MenuItem menuItem in menuItemConnection.Items)
+            //{
+            //    if (menuItem.Equals(sender))
+            //    {
+            //        selectedPort = menuItem.Header.ToString().Substring(menuItem.Header.ToString().LastIndexOf("(COM")).Replace("(", string.Empty).Replace(")", string.Empty).Trim();
+            //        break;
+            //    }
+            //}
 
             if (selectedPort == load.PortName)
             {
@@ -543,7 +557,7 @@ namespace MightyWatt
             }
             else
             {
-                load.Connect(selectedPort);
+                load.Connect(selectedPort, selectedBoard);
             }
         }
 

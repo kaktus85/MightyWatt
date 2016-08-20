@@ -15,6 +15,7 @@ namespace MightyWatt
     public enum TimeUnits : byte { ms, s, min, h }
     public enum Comparison { LessThan, MoreThan }
     public enum ProgramModes : byte { Constant, Ramp };
+    public enum Boards : byte { Zero, Uno };
 
     public delegate void GuiUpdateDelegate();
     public delegate void WatchdogStopDelegate();
@@ -65,7 +66,10 @@ namespace MightyWatt
         private double loggingPeriod = 1; // logging period in seconds
         public TimeUnits LoggingTimeUnit { get; set; } // time units for logging
         private DateTime lastManualLog = DateTime.MinValue;
-        private DateTime lastProgramLog = DateTime.MinValue;        
+        private DateTime lastProgramLog = DateTime.MinValue;
+
+        // minimum firmware version
+        public static readonly int[] MinimumFWVersion = new int[] { 2, 5, 7 };
 
         public Load()
         {
@@ -74,26 +78,26 @@ namespace MightyWatt
             // worker for program mode
             worker.DoWork += worker_DoWork;
             worker.RunWorkerCompleted += worker_Finished;
-            this.worker.WorkerSupportsCancellation = true;
-            this.worker.WorkerReportsProgress = false;
+            worker.WorkerSupportsCancellation = true;
+            worker.WorkerReportsProgress = false;
 
-            this.device.ConnectionUpdatedEvent += connectionUpdated; // pass connection updated event
-            this.device.DataUpdatedEvent += updateGui; // updates 
-            this.device.DataUpdatedEvent += checkError; // errors
-            this.device.DataUpdatedEvent += watchdog; // watchdog
-            this.device.DataUpdatedEvent += log; // data logging
+            device.ConnectionUpdatedEvent += connectionUpdated; // pass connection updated event
+            device.DataUpdatedEvent += updateGui; // updates 
+            device.DataUpdatedEvent += checkError; // errors
+            device.DataUpdatedEvent += watchdog; // watchdog
+            device.DataUpdatedEvent += log; // data logging
 
             TotalLoops = 1; // standard single loop
             LoggingTimeUnit = TimeUnits.s; // default unit second
         }
 
         // connect to selected COM port
-        public void Connect(string portName)
+        public void Connect(string portName, Boards board)
         {
             Disconnect();
             try
             {
-                this.device.Connect(portName);
+                device.Connect(byte.Parse(portName.Replace("COM", string.Empty)), board == Boards.Zero);
             }
             catch (System.IO.IOException ex)
             {
@@ -634,6 +638,14 @@ namespace MightyWatt
                 {
                     loggingPeriod = 0;
                 }
+            }
+        }
+
+        public static string MinimumFirmwareVersion
+        {
+            get
+            {
+                return MinimumFWVersion[0].ToString() + "." + MinimumFWVersion[1].ToString() + "." + MinimumFWVersion[2].ToString();
             }
         }
     }

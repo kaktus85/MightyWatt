@@ -1,78 +1,86 @@
 // IMPORTANT!
 // UNCOMMENT THE LINE THAT BELONGS TO YOUR ARDUINO VERSION, COMMENT THE OTHER LINE
-//#define ARM // Arduino Due and similar ATSAM (32bit) based boards via Programming port (USB)
-#define AVR // Arduino Uno and similar AVR (8bit) based boards
+// If you are using Arduino Zero (M0/M0 Pro), the sketch was tested with Arduino.org board and version of IDE.
+//#define ZERO // Arduino Zero, M0 and M0 Pro (Cortex M0+, 32-bit) via Native port (USB)
+#define UNO // Arduino Uno (UNO, 8-bit)
+//#define DUE // Arduino Due (Cortex M3, 32-bit) via Programming port (USB)
 
 // WARNING!
 // TO MAKE THE MIGHTYWATT WORKING ON ARDUINO DUE, YOU MUST HAVE THE JUMPER ON DUE SET FOR EXTERNAL ANALOG REFERENCE
 
 #include <Wire.h>
-#ifdef AVR
-  #define I2C Wire
+#if defined(ZERO) || defined(UNO)
+  #define I2C Wire  
 #endif
-#ifdef ARM
+#ifdef DUE
   #define I2C Wire1
+#endif
+#ifdef ZERO
+  #define SerialPort SerialUSB
+#endif
+#if defined(UNO) || defined(DUE)
+  #define SerialPort Serial
 #endif
 #include <math.h>
 
 // <Device Information>
-#define FW_VERSION "2.5.6" // Universal for AVR and ARM
+#define FW_VERSION "2.5.7" // Universal for Zero, UNO and DUE
 #define BOARD_REVISION "r2.5" // minimum MightyWatt board revision for this sketch is 2.4
 #define DVM_INPUT_RESISTANCE 330000 // differential input resistance
 // </Device Information>
 
 // <Pins>
-const int REMOTE_PIN = 2;
-const int CV_PIN = 3;
-const int V_GAIN_PIN = 4;
-const int LED_PIN = 5;
-const int ADC_I_PIN = A1;
-const int ADC_V_PIN = A2;
-const int ADC_T_PIN = A3;
+const int16_t REMOTE_PIN = 2;
+const int16_t CV_PIN = 3;
+const int16_t V_GAIN_PIN = 4;
+const int16_t LED_PIN = 5;
+const int16_t ADC_I_PIN = A1;
+const int16_t ADC_V_PIN = A2;
+const int16_t ADC_T_PIN = A3;
 // </Pins>
 
 // <DAC>
 //  commands
-const byte DAC_ADDRESS = 0b1001100; // I2C address of DAC (A0 tied to GND)
-const byte DAC_WRITE_DAC_AND_INPUT_REGISTERS = 0b00110000; // write to DAC memory 
+const uint8_t DAC_ADDRESS = 0b1001100; // I2C address of DAC (A0 tied to GND)
+const uint8_t DAC_WRITE_DAC_AND_INPUT_REGISTERS = 0b00110000; // write to DAC memory 
 //  value
-unsigned int dac = 0;
+uint16_t dac = 0;
 //  calibration
-const unsigned int IDAC_SLOPE = 10405;
-const int IDAC_INTERCEPT = 4;
-const unsigned int VDAC0_SLOPE = 31941;
-const int VDAC0_INTERCEPT = 1;
-const unsigned int VDAC1_SLOPE = 5519;
-const int VDAC1_INTERCEPT = 2;
+const uint16_t IDAC_SLOPE = 10446;
+const int16_t IDAC_INTERCEPT = 3;
+const uint16_t VDAC0_SLOPE = 32019;
+const int16_t VDAC0_INTERCEPT = 7;
+const uint16_t VDAC1_SLOPE = 5514;
+const int16_t VDAC1_INTERCEPT = -2;
 // </DAC>
 
 // <Serial>
-byte commandByte; // first byte of TX/RX data
-byte serialData[7]; // data TX/RX
-const unsigned long SERIAL_TIMEOUT = 1275000; // approx. 5.1 seconds for receiving all the data
+uint8_t commandByte; // first byte of TX/RX data
+uint8_t serialData[7]; // data TX/RX
+const uint32_t SERIAL_TIMEOUT = 1275000; // approx. 5.1 seconds for receiving all the data
 // commands
-const byte QDC = 30; // query device capabilities
-const byte IDN = 31; // identification request
+const uint8_t QDC = 30; // query device capabilities
+const uint8_t IDN = 31; // identification request
 // set values
-unsigned int setCurrent = 0;
-unsigned int setVoltage = 0;
-unsigned long setPower = 0;
-unsigned long setResistance = 0;
+uint16_t setCurrent = 0;
+uint16_t setVoltage = 0;
+uint32_t setPower = 0;
+uint32_t setResistance = 0;
 // </Serial>
 
 // <Watchdog>
-unsigned int watchdogCounter = 0;
-const unsigned int WATCHDOG_TIMEOUT = 2000;
-byte isWatchdogEnabled = 0;
+uint16_t watchdogCounter = 0;
+const uint16_t WATCHDOG_TIMEOUT = 2000;
+uint8_t isWatchdogEnabled = 0;
 // </Watchdog>
 
 // <Thermal Management>
-unsigned int seriesResistance = 0; // series resistance of cables, resistors etc.; only for dissipated power correction, in mOhm
-const byte SERIES_RESISTANCE_ID = 28;
-unsigned long externallyDissipatedPower; // the power that is lost on series resistance in 4-wire mode
-const unsigned long MAX_POWER = 75000; // 75 Watts maximum power
-const byte TEMPERATURE_THRESHOLD = 110;
-byte temperature = 25;
+uint16_t seriesResistance = 0; // series resistance of cables, resistors etc.; only for dissipated power correction, in mOhm
+const uint8_t SERIES_RESISTANCE_ID = 28;
+uint32_t externallyDissipatedPower; // the power that is lost on series resistance in 4-wire mode
+const uint32_t MAX_POWER = 75000; // 75 Watts maximum power
+const uint8_t TEMPERATURE_THRESHOLD = 110;
+uint8_t temperature = 25;
 //  thermistor values
 const float THERMISTOR_B = 3455;
 const float THERMISTOR_T0 = 298.15;
@@ -81,68 +89,79 @@ const float THERMISTOR_R1 = 1000;
 // </Thermal Management>
 
 // <Voltmeter>
-unsigned int voltage = 0;
-byte vRange = 0; // 0 = gain 1, 1 = gain 5.7
+uint16_t voltage = 0;
+uint8_t vRange = 0; // 0 = gain 1, 1 = gain 5.7
 //  hysteresis
-unsigned int voltageRangeDown; // switch gain when going under
+uint16_t voltageRangeDown; // switch gain when going under
 // calibration constants
-const unsigned int VADC0_SLOPE = 31678;
-const unsigned int VADC1_SLOPE = 5453;
-const int VADC0_INTERCEPT = 94;
-const int VADC1_INTERCEPT = 17;
+const uint16_t VADC0_SLOPE = 31689;
+const uint16_t VADC1_SLOPE = 5455;
+const int16_t VADC0_INTERCEPT = 75;
+const int16_t VADC1_INTERCEPT = 4;
 // serial communication
-byte remoteStatus = 0; // 0 = local, 1 = remote
-const byte REMOTE_ID = 29;
+uint8_t remoteStatus = 0; // 0 = local, 1 = remote
+const uint8_t REMOTE_ID = 29;
 // </Voltmeter>
 
 // <Ammeter>
-unsigned int current = 0;
+uint16_t current = 0;
 //  calibration constants
-const unsigned int IADC_SLOPE = 10462;
-const char IADC_INTERCEPT = 26;
+const uint16_t IADC_SLOPE = 10453;
+const int8_t IADC_INTERCEPT = 28;
 // </Ammeter>
 
 // <Status>
-const byte READY = 0;
+const uint8_t READY = 0;
 // others stop device automatically
-const byte CURRENT_OVERLOAD = 1; // both ADC and DAC
-const byte VOLTAGE_OVERLOAD = 2; // both ADC and DAC
-const byte POWER_OVERLOAD = 4;
-const byte OVERHEAT = 8;
+const uint8_t CURRENT_OVERLOAD = 1; // both ADC and DAC
+const uint8_t VOLTAGE_OVERLOAD = 2; // both ADC and DAC
+const uint8_t POWER_OVERLOAD = 4;
+const uint8_t OVERHEAT = 8;
 // current status
-byte loadStatus = READY;
+uint8_t loadStatus = READY;
 // </Status>
 
 // <Operating Mode>
-const byte MODE_CC = 0;
-const byte MODE_CV = 1;
-const byte MODE_CP = 2;
-const byte MODE_CR = 3;
-const byte MODE_CVIP = 4;
-const byte MODE_MPPT = 5;
-byte mode = MODE_CC;
+const uint8_t MODE_CC = 0;
+const uint8_t MODE_CV = 1;
+const uint8_t MODE_CP = 2;
+const uint8_t MODE_CR = 3;
+const uint8_t MODE_CVIP = 4;
+const uint8_t MODE_MPPT = 5;
+uint8_t mode = MODE_CC;
 // </Operating Mode>
 
 // <Computed Values>
-unsigned long power = 0;
-unsigned long previousPower = 0; // used for MPPT
-unsigned long previousPreviousPower = 0; // used for MPPT
+uint32_t power = 0;
+uint32_t previousPower = 0; // used for MPPT
+uint32_t previousPreviousPower = 0; // used for MPPT
 #define MPPT_CURRENT_DOWN     0
 #define MPPT_CURRENT_UP       1
-byte MPPTAction = MPPT_CURRENT_UP;
-byte MPPTPreviousAction = MPPT_CURRENT_DOWN;
-unsigned long resistance = DVM_INPUT_RESISTANCE; // approx. input resistance of voltmeter
+uint8_t MPPTAction = MPPT_CURRENT_UP;
+uint8_t MPPTPreviousAction = MPPT_CURRENT_DOWN;
+uint32_t resistance = DVM_INPUT_RESISTANCE; // approx. input resistance of voltmeter
 // </Computed Values>
+
+#define MAX_IDAC (((4095L * IDAC_SLOPE) >> 12) + IDAC_INTERCEPT)
+#define MAX_IADC (((4080L * IADC_SLOPE) >> 12) + IADC_INTERCEPT)
+#define MAX_VDAC (((4095L * VDAC0_SLOPE) >> 12) + VDAC0_INTERCEPT)
+#define MAX_VADC (((4080L * VADC0_SLOPE) >> 12) + VADC0_INTERCEPT)
 
 void setup()
 {      
   delayMicroseconds(10000); // delay to give the hardware some time to stabilize, it is usually not needed but just for peace of mind…
-  Serial.begin(115200);
-  #ifdef AVR
+  SerialPort.begin(115200);  
+  while(!Serial); // wait for the initialization of serial port  
+  #ifdef ZERO
+    analogReference(AR_EXTERNAL);
+  #endif
+  #ifdef UNO
     analogReference(EXTERNAL);
   #endif
-  #ifdef ARM
+  #ifdef DUE
     ADC->ADC_MR |= (0b1111 << 24); // set maximum ADC tracking time
+  #endif
+  #if defined(ZERO) || defined(DUE)
     analogReadResolution(12);
   #endif
   pinMode(REMOTE_PIN, OUTPUT);
@@ -160,19 +179,19 @@ void setup()
   setI(0);
 
   // system watchdog  
-  #ifdef AVR
+  #ifdef UNO
     cli();
     asm("WDR");
     WDTCSR |= (1 << WDCE) | (1 << WDE);
     WDTCSR = (1 << WDE) | (1 << WDP3) | (1 << WDP0);
     sei();  
-  #endif
+  #endif    
 }
 
 void loop()
 {
   // <Watchdog>
-  #ifdef AVR
+  #ifdef UNO
     asm("WDR"); // system watchdog reset
   #endif
   watchdogCounter++;
@@ -183,15 +202,15 @@ void loop()
     setI(0);
     setVrange(0);
     setRemote(0);
-    Serial.end();
-    Serial.begin(115200);
+    SerialPort.end();
+    SerialPort.begin(115200);
     loadStatus = READY;
   }
   // </Watchdog>
 
   getValues();
   controlLoop();
-  serialMonitor();
+  serialMonitor();  
 }
 
 void enableWatchdog()
@@ -301,7 +320,7 @@ void controlLoop()
     }
     case MODE_MPPT: // maximum power point tracker for photovoltaic panels, uses perturb and observe (hill climbing) in CC mode
     {
-      byte action = MPPTAction;
+      uint8_t action = MPPTAction;
       if (current == 0)
       {
         MPPTAction = MPPT_CURRENT_UP;
@@ -354,14 +373,14 @@ void controlLoop()
 
 void serialMonitor()
 {
-  if (Serial.available() > 0)  
+  if (SerialPort.available() > 0)  
   {
     enableWatchdog();
-    unsigned long timeOut = 0;
-    commandByte = Serial.read();
-    for (byte i = 0; i < ((commandByte & 0b01100000) >> 5); i++)
+    uint32_t timeOut = 0;
+    commandByte = SerialPort.read();
+    for (uint8_t i = 0; i < ((commandByte & 0b01100000) >> 5); i++)
     {
-      while(Serial.available() == 0) 
+      while(SerialPort.available() == 0) 
       {
         delayMicroseconds(4);
         timeOut++; // watchdog counter
@@ -374,7 +393,7 @@ void serialMonitor()
       {
         break;
       }
-      serialData[i] = Serial.read(); // assigns data
+      serialData[i] = SerialPort.read(); // assigns data
     }      
 
     if (timeOut <= SERIAL_TIMEOUT)
@@ -395,7 +414,7 @@ void serialMonitor()
 
 void getVoltage() // gets voltage and saves it to the global variable "voltage"
 {
-  unsigned int adcResult = readADC12bit(ADC_V_PIN);
+  uint16_t adcResult = readADC12bit(ADC_V_PIN);
   if (adcResult > 4080)
   {
     if (vRange == 0) // more than maximum range
@@ -410,7 +429,7 @@ void getVoltage() // gets voltage and saves it to the global variable "voltage"
     }    
   }
 
-  long newVoltage = adcResult;
+  int32_t newVoltage = adcResult;
   if (vRange == 0)
   {
     // computation for larger range (no gain)
@@ -446,12 +465,12 @@ void getVoltage() // gets voltage and saves it to the global variable "voltage"
 
 void getCurrent() // gets current from ADC and saves it to the global variable "current"
 {
-  unsigned int adcResult = readADC12bit(ADC_I_PIN);
+  int32_t adcResult = readADC12bit(ADC_I_PIN);
   if (adcResult > 4080)
   {
     setStatus(CURRENT_OVERLOAD);
   }
-  long newCurrent = adcResult;
+  int32_t newCurrent = adcResult;
   newCurrent = ((newCurrent * IADC_SLOPE) >> 12) + IADC_INTERCEPT;
   if ((newCurrent < 0) || (adcResult == 0))
   {
@@ -463,11 +482,11 @@ void getCurrent() // gets current from ADC and saves it to the global variable "
   }
   
   // led indication of flowing current
-  if (adcResult > 15)
+  if (current > (MAX_IADC / 200))
   {
      digitalWrite(LED_PIN, HIGH);
   }
-  else if (adcResult < 6)
+  else if (current < (MAX_IADC / 300))
   {
      digitalWrite(LED_PIN, LOW);
   }
@@ -475,12 +494,12 @@ void getCurrent() // gets current from ADC and saves it to the global variable "
 
 void getTemperature() // gets temperature from ADC and saves it to the global variable "temperature"
 {
-  int adc = analogRead(ADC_T_PIN);
-  #ifdef AVR
-    float t = 1/((log(THERMISTOR_R1*adc/(1024-adc))-log(THERMISTOR_R0))/THERMISTOR_B + 1/THERMISTOR_T0)-273.15;
-  #endif
-  #ifdef ARM
+  int16_t adc = analogRead(ADC_T_PIN);  
+  #if defined(ZERO) || defined(DUE)
     float t = 1/((log(THERMISTOR_R1*adc/(4096-adc))-log(THERMISTOR_R0))/THERMISTOR_B + 1/THERMISTOR_T0)-273.15;
+  #endif
+  #ifdef UNO
+    float t = 1/((log(THERMISTOR_R1*adc/(1024-adc))-log(THERMISTOR_R0))/THERMISTOR_B + 1/THERMISTOR_T0)-273.15;
   #endif
   if (t < 0)
   {
@@ -501,19 +520,19 @@ void getTemperature() // gets temperature from ADC and saves it to the global va
   }
 }
 
-unsigned int getVRangeSwitching()
+uint16_t getVRangeSwitching()
 {
-  unsigned long Vadc = VADC1_SLOPE;
+  uint32_t Vadc = VADC1_SLOPE;
   Vadc = (((4080 * Vadc) >> 12) + VADC1_INTERCEPT) << 5;
   Vadc /= 33; // 97% of full-scale value
   return Vadc;
 }
 
-void setI(unsigned int value) // set current, unit = 1 mA
+void setI(uint16_t value) // set current, unit = 1 mA
 {  
   //setMode(MODE_CC);
   setCurrent = value;
-  long dacValue = value;
+  int32_t dacValue = value;
   dac = 0;
 
   if (setCurrent > 0)
@@ -550,11 +569,11 @@ void minusCurrent()
   }
 }
 
-void setV(unsigned int value)
+void setV(uint16_t value)
 {
  // setMode(MODE_CV);
   setVoltage = value;
-  long dacValue = value;
+  int32_t dacValue = value;
   if (vRange == 0)
   {
     // no gain
@@ -587,7 +606,7 @@ void setV(unsigned int value)
   }
 }
 
-void setMode(byte newMode)
+void setMode(uint8_t newMode)
 {
   switch (newMode)
   {
@@ -655,57 +674,57 @@ void setMode(byte newMode)
   mode = newMode;
 }
 
-void setLoad(byte id) // procedure called when there is a set (write to Arduino) data command
+void setLoad(uint8_t id) // procedure called when there is a set (write to Arduino) data command
 {  
   switch (id)
   {
   case MODE_CC:
     {
       setMode(MODE_CC);
-      unsigned int b0 = serialData[0];
-      unsigned int b1 = serialData[1];
+      uint16_t b0 = serialData[0];
+      uint16_t b1 = serialData[1];
       setI((b0 << 8) | b1);
       break;
     }
   case MODE_CV:
     {
       setMode(MODE_CV);
-      unsigned int b0 = serialData[0];
-      unsigned int b1 = serialData[1];
+      uint16_t b0 = serialData[0];
+      uint16_t b1 = serialData[1];
       setV((b0 << 8) | b1);
       break;
     }
   case MODE_CP:
     {
       setMode(MODE_CP);
-      unsigned long b0 = serialData[0];
-      unsigned long b1 = serialData[1];
-      unsigned long b2 = serialData[2];
+      uint32_t b0 = serialData[0];
+      uint32_t b1 = serialData[1];
+      uint32_t b2 = serialData[2];
       setPower = (b0 << 16) | (b1 << 8) | b2;
       break;
     }
   case MODE_CR:
     {
       setMode(MODE_CR);
-      unsigned long b0 = serialData[0];
-      unsigned long b1 = serialData[1];
-      unsigned long b2 = serialData[2];
+      uint32_t b0 = serialData[0];
+      uint32_t b1 = serialData[1];
+      uint32_t b2 = serialData[2];
       setResistance = (b0 << 16) | (b1 << 8) | b2;      
       break;
     }        
   case MODE_CVIP:
     {
       setMode(MODE_CVIP);
-      unsigned int b0 = serialData[0];
-      unsigned int b1 = serialData[1];
+      uint16_t b0 = serialData[0];
+      uint16_t b1 = serialData[1];
       setVoltage = (b0 << 8) | b1;
       break;
     }   
   case MODE_MPPT:
     {
       setMode(MODE_MPPT);
-      unsigned int b0 = serialData[0];
-      unsigned int b1 = serialData[1];
+      uint16_t b0 = serialData[0];
+      uint16_t b1 = serialData[1];
       setI((b0 << 8) | b1);
       break;
     } 
@@ -716,15 +735,15 @@ void setLoad(byte id) // procedure called when there is a set (write to Arduino)
    }
   case SERIES_RESISTANCE_ID:
     {
-      unsigned int b0 = serialData[0];
-      unsigned int b1 = serialData[1];
+      uint16_t b0 = serialData[0];
+      uint16_t b1 = serialData[1];
       seriesResistance = (b0 << 8) | b1;
       break;
     }
   }
 }
 
-void setRemote(byte value)
+void setRemote(uint8_t value)
 {
   if (value == 0) // local
   {
@@ -738,40 +757,31 @@ void setRemote(byte value)
   }
 }
 
-void sendMessage(byte command) // procedure called when there is a send (read from Arduino) data command; MSB first
+void sendMessage(uint8_t command) // procedure called when there is a send (read from Arduino) data command; MSB first
 {  
   switch (command)
   {
   case IDN:
     {
-      Serial.println("MightyWatt");
+      SerialPort.println("MightyWatt");
       break;
     }
   case QDC:
-    {
-      unsigned long maxIdac = IDAC_SLOPE;
-      maxIdac = ((4095 * maxIdac) >> 12) + IDAC_INTERCEPT;      
-      unsigned long maxIadc = IADC_SLOPE;
-      maxIadc = ((4080 * maxIadc) >> 12) + IADC_INTERCEPT;      
-      unsigned long maxVdac = VDAC0_SLOPE;
-      maxVdac = ((4095 * maxVdac) >> 12) + VDAC0_INTERCEPT;          
-      unsigned long maxVadc = VADC0_SLOPE;
-      maxVadc = ((4080 * maxVadc) >> 12) + VADC0_INTERCEPT;    
-      
-      Serial.println(FW_VERSION);
-      Serial.println(BOARD_REVISION);            
-      Serial.println(maxIdac);
-      Serial.println(maxIadc);
-      Serial.println(maxVdac);
-      Serial.println(maxVadc);
-      Serial.println(MAX_POWER);
-      Serial.println(DVM_INPUT_RESISTANCE);
-      Serial.println(TEMPERATURE_THRESHOLD);           
+    {      
+      SerialPort.println(FW_VERSION);
+      SerialPort.println(BOARD_REVISION);            
+      SerialPort.println(MAX_IDAC);
+      SerialPort.println(MAX_IADC);
+      SerialPort.println(MAX_VDAC);
+      SerialPort.println(MAX_VADC);
+      SerialPort.println(MAX_POWER);
+      SerialPort.println(DVM_INPUT_RESISTANCE);
+      SerialPort.println(TEMPERATURE_THRESHOLD);           
       break;
     }
   case SERIES_RESISTANCE_ID:
     {
-      Serial.println(seriesResistance);
+      SerialPort.println(seriesResistance);
       break;
     }
   default:
@@ -783,14 +793,14 @@ void sendMessage(byte command) // procedure called when there is a send (read fr
       serialData[4] = temperature;
       serialData[5] = remoteStatus;
       serialData[6] = loadStatus;
-      Serial.write(serialData, 7);
+      SerialPort.write(serialData, 7);
       loadStatus = READY;
       break;
     }
   }
 }
 
-void setVrange(byte newRange)
+void setVrange(uint8_t newRange)
 {  
   vRange = newRange; 
   if (newRange == 0)
@@ -811,7 +821,7 @@ void setVrange(byte newRange)
   }
 }
 
-void setStatus(byte code)
+void setStatus(uint8_t code)
 {
   loadStatus |= code;
   if (code)
@@ -831,21 +841,21 @@ void setDAC() // sets value to DAC
   delayMicroseconds(8); // settling time  
 }
 
-unsigned int readADC12bit(int channel) // oversamples ADC to 12 bit (AVR) or averages 16 samples (ARM)
+uint16_t readADC12bit(int16_t channel) // oversamples ADC to 12 bit (UNO) or averages 16 samples (DUE)
 {  
-  byte i;
-  unsigned int analogResult = 0;
-  #ifdef ARM
+  uint8_t i;
+  uint16_t analogResult = 0;
+  #if defined(ZERO) || defined(DUE)
     delayMicroseconds(1000);
   #endif
   for (i = 0; i < 16; i++)
   {
     analogResult += analogRead(channel);
-  }
-  #ifdef AVR
-    return (analogResult >> 2);
-  #endif
-  #ifdef ARM
+  }  
+  #if defined(ZERO) || defined(DUE)
     return (analogResult >> 4);
+  #endif
+  #ifdef UNO
+    return (analogResult >> 2);
   #endif
 }

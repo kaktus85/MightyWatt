@@ -5,10 +5,10 @@
     <Grid>
         <Image Height="260" HorizontalAlignment="Left" Name="image1" Stretch="Uniform" VerticalAlignment="Top" Width="131" Source="/MightyWatt;component/Images/mightywatt-aboutbox-01.png" ToolTip="Click to load resource page in your browser" MouseUp="image1_MouseUp" />
         <TextBlock Height="79" HorizontalAlignment="Left" Margin="145,143,0,0" Name="textBlock1" Text="Control program for MightyWatt Arduino Electronic Load. MightyWatt is an Arduino shield designed as a constant-current/constant-voltage load. MightyWatt uses a FET in linear mode to create an adjustable resistance." VerticalAlignment="Top" Width="309" TextWrapping="Wrap" TextAlignment="Left" />
-        <Label Content="Version: 1.2.4.0" Height="28" HorizontalAlignment="Left" Margin="140,10,0,0" Name="label1" VerticalAlignment="Top" />
+        <Label Content="Version: 1.3.0.0" Height="28" HorizontalAlignment="Left" Margin="140,10,0,0" Name="labelVersion" VerticalAlignment="Top" />
         <Label Content="License: GPL v.3" Height="28" HorizontalAlignment="Left" Margin="140,40,0,0" Name="label2" VerticalAlignment="Top" />
         <Label Content="Author: Jakub Polonský, jpolonsky@gmail.com" Height="28" HorizontalAlignment="Left" Margin="140,70,0,0" Name="label3" VerticalAlignment="Top" />
-        <Label Content="Minimum firmware version: 2.5.5" Height="28" HorizontalAlignment="Left" Margin="140,100,0,0" Name="label4" VerticalAlignment="Top" />
+        <Label Content="Minimum firmware version: 2.5.7" Height="28" HorizontalAlignment="Left" Margin="140,100,0,0" Name="labelMinimumFWVersion" VerticalAlignment="Top" />
         <Button x:Name="button" Content="Click to open resource page in your browser" HorizontalAlignment="Left" Margin="145,223,0,0" VerticalAlignment="Top" Width="309" Click="button_Click"/>
     </Grid>
 </Window>

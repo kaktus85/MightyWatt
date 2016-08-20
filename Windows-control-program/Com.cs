@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO.Ports;
 using System.Threading;
+using System.Threading.Tasks;
 using System.ComponentModel;
 using System.Management;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ namespace MightyWatt
         public const int LoadDelay = readTimeout + writeTimeout;
         private const int baudRate = 115200;
         private const int dataBits = 8;
-        private const string newLine = "\r\n";
+        private readonly char[] newLine = new char[] {'\r', '\n'};
         private const byte SERIES_RESISTANCE_ID = 28;
         private const byte REMOTE_ID = 29;
         private const byte QDC = 30;
@@ -61,7 +62,7 @@ namespace MightyWatt
             port.ReadTimeout = readTimeout;
             port.StopBits = stopBits;
             port.WriteTimeout = writeTimeout;
-            port.NewLine = newLine;
+            port.NewLine = newLine;          
 
             readData = new byte[messageLength]; // initializes read data (data from the load) array
             dataToWrite = new byte[] { 0 }; // initializes write data (data from the load) array to default
@@ -75,16 +76,28 @@ namespace MightyWatt
         }
 
         // connects to a specific COM port
-        public void Connect(string portName)
+        public /*async*/ void Connect(byte portNumber, bool rtsDtrEnable)
         {
             if (port.IsOpen) // terminates any previous connection
             {
                 Disconnect();
             }
-            port.PortName = portName;
+            port.PortNumber = portNumber;
+            if (rtsDtrEnable)
+            {
+                port.DtrControl = DTR_CONTROL.ENABLE;
+                port.RtsControl = RTS_CONTROL.ENABLE;
+            }
+            else
+            {
+                port.DtrControl = DTR_CONTROL.DISABLE;
+                port.RtsControl = RTS_CONTROL.DISABLE;
+            }
+
             port.Open();
-            while (port.IsOpen == false) { } // wait for port to open            
-            if (identify() || identify() || identify()) // for some stupid reason I do not know, it sometimes requires up to three attempts to connect
+            while (port.IsOpen == false) { } // wait for port to open        
+                
+            if (/*await*/ identify() || identify() || identify()) // three attempts
             {
                 activePortName = port.PortName;
                 if (ConnectionUpdatedEvent != null)
@@ -142,9 +155,9 @@ namespace MightyWatt
             }
 
             // last data update (with reset data)
-            if (this.DataUpdatedEvent != null)
+            if (DataUpdatedEvent != null)
             {
-                this.DataUpdatedEvent(); // event for data update complete
+                DataUpdatedEvent(); // event for data update complete
             }
         }
 
@@ -156,8 +169,8 @@ namespace MightyWatt
                 try
                 {
                     setToLoad();
-                    readFromLoad();
-                    checkStatus();
+                    readFromLoad();                    
+                    checkStatus();                    
                     if (this.DataUpdatedEvent != null)
                     {
                         this.DataUpdatedEvent(); // event for data update complete
@@ -165,13 +178,13 @@ namespace MightyWatt
                 }
                 catch (Exception ex)
                 {
-                    if (ex is System.TimeoutException || ex is System.IO.IOException)
+                    if (ex is TimeoutException || ex is System.IO.IOException)
                     {
                         Disconnect();
                         System.Windows.MessageBox.Show(ex.Message + "\nTo continue, please reconnect load.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                         return;
                     }
-                    if (ex is System.InvalidOperationException)
+                    if (ex is InvalidOperationException)
                     {
                         System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                         return;
@@ -183,33 +196,45 @@ namespace MightyWatt
             e.Cancel = true;
         }
 
+        // reads a line from the load
+        private /*async Task<string>*/ string ReadLine()
+        {
+            return /*await*/ port.ReadLine/*Async*/();
+        }
+
         // sends the current data block to the load
         private void setToLoad()
         {
-            port.Write(dataToWrite, 0, dataToWrite.Length);
-            dataToWrite = new byte[] { 0 }; // reset the data block
-            Thread.Sleep(2); // wait for write to finish
+            byte[] dataCopy = new byte[dataToWrite.Length];
+            for (int i = 0; i < dataToWrite.Length; i++)
+            {
+                dataCopy[i] = dataToWrite[i];
+            }
+           
+            port.Write/*Async*/(dataCopy);
+            dataToWrite = new byte[] { 0 }; // reset the data block    
+            Thread.Sleep(2);        
         }
 
         // reads available data block from the load
-        private void readFromLoad()
+        private/* async*/ void readFromLoad()
         {
-            for (byte i = 0; i < messageLength; i++)
+            byte[] newData = /*await*/ port.ReadBytes/*Async*/(messageLength);
+            if (newData != null)
             {
-                readData[i] = (byte)(port.ReadByte() & 0xFF);
-            }
-            port.DiscardInBuffer(); // discards any excess data
+                readData = newData;
+            }            
+            //port.ReadExisting(); // discards any excess data          
         }
 
         // tries to read identification string from the load, if succeedes, queries device capabilities
-        private bool identify()
-        {
-            byte[] buffer = new byte[] { IDN };
+        private /*async Task<bool>*/ bool identify()
+        {         
             try
             {
                 port.ReadExisting(); // flush data
-                port.Write(buffer, 0, 1);
-                string response = port.ReadLine();
+                port.Write/*Async*/(new byte[] { IDN });
+                string response = /*await*/ ReadLine();
                 if (response.Contains(IDN_RESPONSE))
                 {
                     queryCapabilities();
@@ -219,25 +244,61 @@ namespace MightyWatt
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+               // System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 return false;
             }
         }
 
         // reads device parameters
-        private void queryCapabilities()
+        private /*async*/ void queryCapabilities()
         {
-            byte[] buffer = new byte[] { QDC };
-            port.Write(buffer, 0, 1);
-            this.firmwareVersion = port.ReadLine();
-            this.boardRevision = port.ReadLine();
-            this.maxIdac = Double.Parse(port.ReadLine()) / 1000;
-            this.maxIadc = Double.Parse(port.ReadLine()) / 1000;
-            this.maxVdac = Double.Parse(port.ReadLine()) / 1000;
-            this.maxVadc = Double.Parse(port.ReadLine()) / 1000;
-            this.maxPower = Double.Parse(port.ReadLine()) / 1000;
-            this.dvmInputResistance = Double.Parse(port.ReadLine());
-            this.temperatureThreshold = int.Parse(port.ReadLine());
+            port.Write/*Async*/(new byte[] { QDC });
+            firmwareVersion = /*await*/ ReadLine();
+            boardRevision = /*await*/ ReadLine();
+            maxIdac = Double.Parse(/*await*/ ReadLine()) / 1000;
+            maxIadc = Double.Parse(/*await*/ ReadLine()) / 1000;
+            maxVdac = Double.Parse(/*await*/ ReadLine()) / 1000;
+            maxVadc = Double.Parse(/*await*/ ReadLine()) / 1000;
+            maxPower = Double.Parse(/*await*/ ReadLine()) / 1000;
+            dvmInputResistance = Double.Parse(/*await*/ ReadLine());
+            temperatureThreshold = int.Parse(/*await*/ ReadLine());
+
+            // check firmware version
+            string[] firmware = firmwareVersion.Split('.');
+            bool firmwareVersionOK = false;
+            if (firmware.Length >= 3)
+            {
+                int[] fw = new int[3];
+                if (int.TryParse(firmware[0], out fw[0]) && int.TryParse(firmware[1], out fw[1]) && int.TryParse(firmware[2], out fw[2]))
+                {
+                    if (fw[0] > Load.MinimumFWVersion[0])
+                    {
+                        firmwareVersionOK = true;
+                    }
+                    else if (fw[0] == Load.MinimumFWVersion[0])
+                    {
+                        if (fw[1] > Load.MinimumFWVersion[1])
+                        {
+                            firmwareVersionOK = true;
+                        }
+                        else if (fw[1] == Load.MinimumFWVersion[1])
+                        {
+                            if (fw[2] >= Load.MinimumFWVersion[2])
+                            {
+                                firmwareVersionOK = true;
+                            }
+                        }
+                    }
+                }
+                if (!firmwareVersionOK)
+                {
+                    System.Windows.MessageBox.Show("Firmware version is lower than minimum required version for this software\nMinimum firmware version: " + Load.MinimumFirmwareVersion + "\nThis load firmware version: " + firmwareVersion, "Firmware version error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Exclamation);
+                }                
+            }  
+            else
+            {
+                System.Windows.MessageBox.Show("The load did not report its firmware version", "Unknown firmware version", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Exclamation);
+            }             
         }
 
         // calculates voltage and current from received values
@@ -549,72 +610,5 @@ namespace MightyWatt
                 return this.errorList;
             }
         }
-    }
-
-    // Following code for retrieving COM port friendly names is based on code by Dario Santarelli https://dariosantarelli.wordpress.com/2010/10/18/c-how-to-programmatically-find-a-com-port-by-friendly-name/
-    // WMI calls to the more obvious Win32_SerialPort run very slowly on certain machines, hence the code below which calls to Win32_PnPEntity. Thank you Microsoft again :/
-
-    internal class ProcessConnection
-    {
-        public static ConnectionOptions ProcessConnectionOptions()
-        {
-            ConnectionOptions options = new ConnectionOptions();
-            options.Impersonation = ImpersonationLevel.Impersonate;
-            options.Authentication = AuthenticationLevel.Default;
-            options.EnablePrivileges = true;
-            return options;
-        }
-
-        public static ManagementScope ConnectionScope(string machineName, ConnectionOptions options, string path)
-        {
-            ManagementScope connectScope = new ManagementScope();
-            connectScope.Path = new ManagementPath(@"\\" + machineName + path);
-            connectScope.Options = options;
-            connectScope.Connect();
-            return connectScope;
-        }
-    }
-
-    public class COMPortInfo
-    {
-        public string Name { get; set; }
-        public string Description { get; set; }
-
-        public COMPortInfo() { }
-
-        public static List<COMPortInfo> GetCOMPortsInfo()
-        {
-            List<COMPortInfo> comPortInfoList = new List<COMPortInfo>();
-
-            ConnectionOptions options = ProcessConnection.ProcessConnectionOptions();
-            ManagementScope connectionScope = ProcessConnection.ConnectionScope(Environment.MachineName, options, @"\root\CIMV2");
-
-            ObjectQuery objectQuery = new ObjectQuery("SELECT * FROM Win32_PnPEntity WHERE ConfigManagerErrorCode = 0");
-            ManagementObjectSearcher comPortSearcher = new ManagementObjectSearcher(connectionScope, objectQuery);
-
-            using (comPortSearcher)
-            {
-                string caption = null;
-                foreach (ManagementObject obj in comPortSearcher.Get())
-                {
-                    if (obj != null)
-                    {
-                        object captionObj = obj["Caption"];
-                        if (captionObj != null)
-                        {
-                            caption = captionObj.ToString();
-                            if (caption.Contains("(COM"))
-                            {
-                                COMPortInfo comPortInfo = new COMPortInfo();
-                                comPortInfo.Name = caption.Substring(caption.LastIndexOf("(COM")).Replace("(", string.Empty).Replace(")", string.Empty).Trim();
-                                comPortInfo.Description = caption.Trim();
-                                comPortInfoList.Add(comPortInfo);
-                            }
-                        }
-                    }
-                }
-            }
-            return comPortInfoList;
-        }
-    }
+    }    
 }
