@@ -24,7 +24,7 @@
 #include <math.h>
 
 // <Device Information>
-#define FW_VERSION "2.5.7" // Universal for Zero, UNO and DUE
+#define FW_VERSION "2.5.8" // Universal for Zero, UNO and DUE
 #define BOARD_REVISION "r2.5" // minimum MightyWatt board revision for this sketch is 2.4
 #define DVM_INPUT_RESISTANCE 330000 // differential input resistance
 // </Device Information>
@@ -107,7 +107,7 @@ const uint8_t REMOTE_ID = 29;
 uint16_t current = 0;
 //  calibration constants
 const uint16_t IADC_SLOPE = 10453;
-const int8_t IADC_INTERCEPT = 28;
+const int16_t IADC_INTERCEPT = 28;
 // </Ammeter>
 
 // <Status>
