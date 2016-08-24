@@ -34,8 +34,10 @@ const int16_t ADC_V_PIN = A2;
 
 // <DAC>
 //  commands
-const uint8_t DAC_ADDRESS = 0b1001100; // I2C address of DAC (A0 tied to GND)
-const uint8_t DAC_WRITE_DAC_AND_INPUT_REGISTERS = 0b00110000; // write to DAC memory 
+#define DAC_ADDRESS                          (0b1001100)
+#define DAC_WRITE_DAC_AND_INPUT_REGISTERS    (0b00110000)
+#define DAC_WRITE_CONTROL_REGISTER           (0b01000000)
+#define DAC_RESET                            (0b10000000)
 //  value
 uint16_t dac = 0;
 // </DAC>
@@ -63,6 +65,8 @@ void setup()
   digitalWrite(V_GAIN_PIN, LOW);
   digitalWrite(CV_PIN, LOW);
   I2C.begin();  
+  initDAC();
+  delay(1);
   uint16_t adc;
   int16_t command = 0;
   
@@ -165,6 +169,15 @@ void setDAC() // sets value to DAC
   I2C.write((dac & 0xF) << 4);
   I2C.endTransmission();
   delayMicroseconds(8); // settling time  
+}
+
+void initDAC() // resets the DAC
+{
+  I2C.beginTransmission(DAC_ADDRESS); 
+  I2C.write(DAC_WRITE_CONTROL_REGISTER);
+  I2C.write(DAC_RESET);
+  I2C.write((uint8_t)0);
+  I2C.endTransmission();
 }
 
 uint16_t readADC12bit(int16_t channel) // oversamples ADC to 12 bit (AVR) or averages 16 samples (ARM)
