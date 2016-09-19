@@ -99,7 +99,7 @@ namespace MightyWatt
             {
                 device.Connect(byte.Parse(portName.Replace("COM", string.Empty)), board == Boards.Zero);
             }
-            catch (System.IO.IOException ex)
+            catch (IOException ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -308,6 +308,7 @@ namespace MightyWatt
         {
             if (this.device.ErrorList != null)
             {
+                Stop(); // stops the load for safety
                 this.Error(this.device.ErrorList); // raise error event in case the error list is not empty
             }
         }

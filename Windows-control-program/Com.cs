@@ -242,7 +242,7 @@ namespace MightyWatt
                 }
                 return false;
             }
-            catch (Exception ex)
+            catch (Exception /*ex*/)
             {
                // System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 return false;

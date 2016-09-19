@@ -1,21 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.IO.Ports;
-using System.Threading;
 using Microsoft.Win32;
-using System.Management;
+using System.Threading.Tasks;
 
 namespace MightyWatt
 {
@@ -32,6 +23,7 @@ namespace MightyWatt
         private delegate void GuiDispatcherDelegate();
         private GuiDispatcherDelegate guiDispatcherDelegate;
         private bool errorShowingEnabled = true;
+        private bool watchdogMessageShowingEnabled = true;
 
         // bindings
         List<BindingExpression> bindingExpressions;
@@ -49,15 +41,15 @@ namespace MightyWatt
             fillCombos();
 
             // events and delegates
-            load.Error += (string error) => this.Dispatcher.BeginInvoke(new ErrorDelegate(showErrors), error); // asynchronous (prevents multiple message boxes showing) error list
+            load.Error += showErrors;
             load.ConnectionUpdateEvent += connectionUpdated;
             guiDispatcherDelegate += updateGui;
-            load.GuiUpdateEvent += () => this.Dispatcher.Invoke(guiDispatcherDelegate, null); // invoking GUI update from different thread
+            load.GuiUpdateEvent += () => Dispatcher.Invoke(guiDispatcherDelegate, null); // invoking GUI update from different thread
             // gui change for program start/stop and single item finish
-            this.load.ProgramStartedEvent += programStartChangeGui;
-            this.load.ProgramStoppedEvent += programStopChangeGui;
+            load.ProgramStartedEvent += programStartChangeGui;
+            load.ProgramStoppedEvent += programStopChangeGui;
             // watchdog
-            this.load.WatchdogStop += () => this.Dispatcher.BeginInvoke(new WatchdogStopDelegate(watchdogStop)); // asynchronous (prevents multiple message boxes showing) watchdog message
+            load.WatchdogStop += watchdogStop;
             comboBoxWatchdogComparator.SelectedIndex = 1;
         }
 
@@ -441,26 +433,46 @@ namespace MightyWatt
         }
 
         // in case of watchdog action, shows error message and prompts user to disable watchdog
-        private void watchdogStop()
+        private async void watchdogStop()
         {
             load.WatchdogEnabled = false;
-            MessageBoxResult result = MessageBox.Show("Watchdog stopped the load.\nDo you want to keep the watchdog on?", "Watchdog", MessageBoxButton.YesNo, MessageBoxImage.Information);
-            if (result == MessageBoxResult.Yes)
+            if (watchdogMessageShowingEnabled)
             {
-                load.WatchdogEnabled = true;
+                watchdogMessageShowingEnabled = false;
+                await showWatchdogMessage();
+                watchdogMessageShowingEnabled = true;
             }
         }
 
-        // in case of load reported error, stops the load and shows message
-        private void showErrors(string errorList) // shows error list in case there are some
+        // show watchdog message
+        private Task showWatchdogMessage()
         {
-            load.Stop(); // stops the load for safety
-            if (errorShowingEnabled) // prevents showing multiple message boxes
+            return Task.Run(() =>
+            {
+                MessageBoxResult result = MessageBox.Show("Watchdog stopped the load.\nDo you want to keep the watchdog on?", "Watchdog", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                if (result == MessageBoxResult.Yes)
+                {
+                    load.WatchdogEnabled = true;
+                }
+            }
+            );
+        }
+
+        // in case of load reported error shows message
+        private async void showErrors(string errorList) // shows error list in case there are some
+        {
+            if (errorShowingEnabled)
             {
                 errorShowingEnabled = false;
-                MessageBox.Show(errorList + "\nThe load has been stopped", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                await showErrorMessage(errorList);
+                errorShowingEnabled = true;
             }
-            errorShowingEnabled = true;
+        }
+
+        // show error message
+        private Task showErrorMessage(string message)
+        {
+            return Task.Run(() => MessageBox.Show(message + "\nThe load has been stopped", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
         }
 
         // updates all bound GUI elements
