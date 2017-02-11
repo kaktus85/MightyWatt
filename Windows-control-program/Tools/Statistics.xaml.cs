@@ -142,7 +142,7 @@ namespace MightyWatt
         }
 
         private void Log()
-        {
+        {            
             if (log == null)
             {
                 return;
@@ -153,6 +153,7 @@ namespace MightyWatt
                 return;
             }
 
+            DateTime now = DateTime.Now;
             StringBuilder sb = new StringBuilder();
             string prefix = string.Empty;
             if (OffsetLog)
@@ -172,6 +173,16 @@ namespace MightyWatt
                 sb.Append(textBoxUserNote.Text);
                 log.WriteLine(sb.ToString());
             }
+
+            // timestamp            
+            sb.Clear();
+            sb.Append(prefix);
+            sb.Append("System timestamp");
+            sb.Append(File.delimiter);
+            sb.Append(now.ToShortDateString());
+            sb.Append(" ");
+            sb.Append(now.ToLongTimeString());
+            log.WriteLine(sb.ToString());
 
             // integrated values
             sb.Clear();
