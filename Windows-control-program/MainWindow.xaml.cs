@@ -24,11 +24,12 @@ namespace MightyWatt
         private GuiDispatcherDelegate guiDispatcherDelegate;
         private bool errorShowingEnabled = true;
         private bool watchdogMessageShowingEnabled = true;
+        private Statistics statisticsWindow;
 
         // bindings
         List<BindingExpression> bindingExpressions;
         private Binding logManualBinding, logProgramBinding, temperatureBinding, voltageBinding, currentBinding, powerBinding, resistanceBinding,
-                        manualUnitBinding, mainButtonBinding, filePathBinding, deviceInfoBinding, seriesResistanceBinding,
+                        manualUnitBinding, mainButtonBinding, filePathBinding, deviceInfoBinding, settingsBinding, seriesResistanceBinding,
                         programConstantUnitBinding, programConstantSkipUnitBinding, programRampUnitBinding, programRampUnitSkipBinding, groupBoxManualControlBinding,
                         watchdogEnabledBinding, watchdogUnitBinding, watchdogModeBinding, watchdogComparisonBinding, watchdogValueBinding,
                         localBinding, remoteBinding, localRemoteEnabledBinding, listBoxSelectedIndexBinding;
@@ -164,6 +165,14 @@ namespace MightyWatt
             deviceInfoBinding.Mode = BindingMode.OneWay;
             this.menuItemDeviceInfo.SetBinding(MenuItem.IsEnabledProperty, this.deviceInfoBinding);
             bindingExpressions.Add(BindingOperations.GetBindingExpression(this.menuItemDeviceInfo, MenuItem.IsEnabledProperty));
+
+            // settings binding
+            settingsBinding = new Binding();
+            settingsBinding.Path = new PropertyPath("IsConnected");
+            settingsBinding.Source = load;
+            settingsBinding.Mode = BindingMode.OneWay;
+            menuItemToolsIntegratorsAndStatistics.SetBinding(MenuItem.IsEnabledProperty, settingsBinding);
+            bindingExpressions.Add(BindingOperations.GetBindingExpression(menuItemToolsIntegratorsAndStatistics, MenuItem.IsEnabledProperty));
 
             // series resistance binding
             seriesResistanceBinding = new Binding();
@@ -931,6 +940,36 @@ namespace MightyWatt
             window.ShowDialog();
         }
 
+        // disconnect load
+        private void menuItemDisconnect_Click(object sender, RoutedEventArgs e)
+        {
+            load.Disconnect();
+        }
+
+        // show integrators and statistics window
+        private void menuItemToolsIntegratorsAndStatistics_Click(object sender, RoutedEventArgs e)
+        {
+            if (statisticsWindow == null) // only open new window if the old one is closed
+            {
+                statisticsWindow = new Statistics(load.PresentValues, load.DvmInputResistance, load.LogFile);
+                load.DataUpdated += statisticsWindow.Update;
+                statisticsWindow.Closing += StatisticsWindow_Closing;
+                statisticsWindow.Closed += StatisticsWindow_Closed;
+                statisticsWindow.Show();
+            }
+        }
+
+        private void StatisticsWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            load.DataUpdated -= statisticsWindow.Update;
+        }
+
+        // marks the window null
+        private void StatisticsWindow_Closed(object sender, EventArgs e)
+        {
+            statisticsWindow = null;
+        }
+
         // opens device info window
         private void menuItemDeviceInfo_Click(object sender, RoutedEventArgs e)
         {
@@ -948,6 +987,14 @@ namespace MightyWatt
         private void menuItemResources_Click(object sender, RoutedEventArgs e)
         {
             MainWindow.OpenResourcesInBrowser();
+        }
+
+        public bool IsConnected
+        {
+            get
+            {
+                return load.IsConnected;
+            }
         }
     }
 }

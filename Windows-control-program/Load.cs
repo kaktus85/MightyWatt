@@ -43,11 +43,12 @@ namespace MightyWatt
         public static readonly string[] ModeNames = { "Current", "Voltage", "Power", "Resistance", "Inverted phase voltage", "Max power point tracker" };
         public static readonly string[] UnitSymbols = { "A", "V", "W", "Ω", "V", "A"};
         DateTime lastGuiUpdate = DateTime.Now;
-        private double guiUpdatePeriod = 0.3;
+        private double guiUpdatePeriod = 0.2;
         public event GuiUpdateDelegate GuiUpdateEvent;
         public event GuiUpdateDelegate ProgramStartedEvent; // occurs when program starts
         public event GuiUpdateDelegate ProgramStoppedEvent; // occurs when program finishes
         public event ConnectionUpdateDelegate ConnectionUpdateEvent; // occurs when connection of load changes
+        public event DataUpdateDelegate DataUpdated; // pass dataupdate event from connection
 
         // error management
         public event ErrorDelegate Error;
@@ -429,12 +430,10 @@ namespace MightyWatt
         {
             if ((DateTime.Now - this.lastGuiUpdate).TotalSeconds >= guiUpdatePeriod)
             {
-                this.lastGuiUpdate = DateTime.Now;
-                if (this.GuiUpdateEvent != null)
-                {
-                    this.GuiUpdateEvent();
-                }
+                lastGuiUpdate = DateTime.Now;
+                GuiUpdateEvent?.Invoke();
             }
+            DataUpdated?.Invoke();
         }
 
         // window with load capabilities
@@ -446,7 +445,23 @@ namespace MightyWatt
                 deviceInfo.ShowDialog();
             }
         }
-        
+
+        public MeasurementValues PresentValues
+        {
+            get
+            {
+                return device.PresentValues;
+            }
+        }
+
+        public double DvmInputResistance
+        {
+            get
+            {
+                return device.DvmInputResistance;
+            }
+        }
+
         public string PortName
         {
             get
@@ -597,7 +612,15 @@ namespace MightyWatt
                 }
                 return "No file";
             }
-        }     
+        }
+
+        public File LogFile
+        {
+            get
+            {
+                return file;
+            }
+        }
 
         public bool IsLoggingManual
         {

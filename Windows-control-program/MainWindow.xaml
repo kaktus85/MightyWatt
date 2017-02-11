@@ -14,6 +14,7 @@
             <MenuItem Header="Connection" Name="menuItemConnection" MouseEnter="menuItemConnection_MouseEnter" >
                 <MenuItem x:Name="menuItemConnectionZero" Header="Arduino Zero (native port)"/>
                 <MenuItem x:Name="menuItemConnectionUno" Header="Arduino Uno &amp; Due (programming port)"/>
+                <MenuItem x:Name="menuItemDisconnect" Header="Disconnect" Click="menuItemDisconnect_Click" IsEnabled="{Binding IsConnected}"/>
             </MenuItem>
             <MenuItem Header="Program items" Name="menuItemExperiment">
                 <MenuItem Header="Save" Name="menuItemExperimentSave" Click="menuItemExperimentSave_Click" />
@@ -32,6 +33,9 @@
             </MenuItem>
             <MenuItem Header="Advanced" Name="menuItemAdvanced">
                 <MenuItem Header="Series resistance" Name="menuItemSeriesResistance" Click="menuItemSeriesResistance_Click"></MenuItem>
+            </MenuItem>
+            <MenuItem Header="Tools" Name="menuItemTools">
+                <MenuItem Header="Integrators and statistics" Name="menuItemToolsIntegratorsAndStatistics" ToolTip="Charge and dissipated energy integrators, statistics" Click="menuItemToolsIntegratorsAndStatistics_Click"></MenuItem>
             </MenuItem>
             <MenuItem Header="Help" Name="menuItemHelp">
                 <MenuItem Header="Device Info" Name="menuItemDeviceInfo" Click="menuItemDeviceInfo_Click"></MenuItem>

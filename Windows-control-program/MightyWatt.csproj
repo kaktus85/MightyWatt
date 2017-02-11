@@ -79,6 +79,9 @@
     <Compile Include="SeriesResistance.xaml.cs">
       <DependentUpon>SeriesResistance.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Tools\Statistics.xaml.cs">
+      <DependentUpon>Statistics.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Xml.cs" />
     <Page Include="About.xaml">
       <SubType>Designer</SubType>
@@ -108,6 +111,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="SeriesResistance.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tools\Statistics.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -51,9 +51,11 @@ namespace MightyWatt
         private double current;
         private double voltage;
         private double seriesResistance = 0;
+        private MeasurementValues values;
 
         public Com()
         {
+            values = new MeasurementValues(voltage, current);
             // creates new serialport object and sets it
             port = new SerialPort();
             port.BaudRate = baudRate;
@@ -306,6 +308,8 @@ namespace MightyWatt
         {
             this.current = (Convert.ToDouble(readData[0]) * 256.0 + Convert.ToDouble(readData[1])) / 1000.0;
             this.voltage = (Convert.ToDouble(readData[2]) * 256.0 + Convert.ToDouble(readData[3])) / 1000.0;
+            values.current = this.current;
+            values.voltage = this.voltage;
         }
 
         // this method handles the communication protocol of sending the data to the load
@@ -504,6 +508,14 @@ namespace MightyWatt
                 data[2] = Convert.ToByte(val & 0xFF);
                 dataToWrite = data;
                 seriesResistance = value;
+            }
+        }
+
+        public MeasurementValues PresentValues
+        {
+            get
+            {
+                return values;
             }
         }
 

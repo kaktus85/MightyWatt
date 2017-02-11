@@ -4,13 +4,15 @@ using System.IO;
 
 namespace MightyWatt
 {
-    class File
+    public class File
     {
         private StreamWriter file;
         private string filePath;
         private DateTime startTime; // time at creation of file
         private const string NUMBER_FORMAT = "f3"; // default number format (mV, mA resolution)
         private const string TEMPERATURE_NUMBER_FORMAT = "f0"; // default number format for temperature (°C)
+        public const int columnCount = 6; // number of columns
+        public const char delimiter = '\t';
 
         // creates a new file with header and notes the starting time
         public File(string filePath)
@@ -44,6 +46,14 @@ namespace MightyWatt
                 lr = "l";
             }
             file.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}", current.ToString(NUMBER_FORMAT), voltage.ToString(NUMBER_FORMAT), elapsedSeconds(), temperature.ToString(TEMPERATURE_NUMBER_FORMAT), lr);
+        }
+
+        public void WriteLine(string line)
+        {
+            if (!string.IsNullOrEmpty(FilePath))
+            {
+                file.WriteLine(line);
+            }
         }
 
         // returns number of elapsed seconds since file creation
