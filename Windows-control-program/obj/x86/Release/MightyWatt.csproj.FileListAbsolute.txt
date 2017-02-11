@@ -549,3 +549,5 @@ C:\Dokumenty\Git\MightyWatt\Windows-control-program\obj\x86\Release\SeriesResist
 C:\Dokumenty\Git\MightyWatt\Windows-control-program\obj\x86\Release\MightyWatt.g.resources
 C:\Dokumenty\Git\MightyWatt\Windows-control-program\obj\x86\Release\MightyWatt.Properties.Resources.resources
 C:\Dokumenty\Git\MightyWatt\Windows-control-program\obj\x86\Release\MightyWatt.csproj.GenerateResource.Cache
+C:\Dokumenty\Git\MightyWatt\Windows-control-program\obj\x86\Release\Tools\Statistics.g.cs
+C:\Dokumenty\Git\MightyWatt\Windows-control-program\obj\x86\Release\Tools\Statistics.baml
