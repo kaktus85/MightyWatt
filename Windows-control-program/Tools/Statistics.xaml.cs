@@ -122,10 +122,9 @@ namespace MightyWatt
                 {
                     resistance.Add(values.voltage / values.current);
                 }
-
-                // update GUI
-                UpdateGUI();
             }
+            // update GUI
+            UpdateGUI();
         }
 
         private void Reset()
@@ -296,6 +295,7 @@ namespace MightyWatt
         private void buttonLog_Click(object sender, RoutedEventArgs e)
         {
             Log();
+            UpdateGUI();
         }
 
         private void comboBoxChargeUnit_SelectionChanged(object sender, SelectionChangedEventArgs e)

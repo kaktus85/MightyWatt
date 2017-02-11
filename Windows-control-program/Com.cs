@@ -97,15 +97,24 @@ namespace MightyWatt
             }
 
             port.Open();
-            while (port.IsOpen == false) { } // wait for port to open        
-                
-            if (/*await*/ identify() || identify() || identify()) // three attempts
+            while (port.IsOpen == false) { } // wait for port to open    
+            Thread.Sleep(300); // give time to Arduinos that reset upon port opening     
+            port.ReadExisting();
+
+            bool identified = false;
+            for (int i = 0; i < 3; i++)
+            {
+                if (identify())
+                {
+                    identified = true;
+                    break;
+                }
+            }
+
+            if (identified) // three attempts
             {
                 activePortName = port.PortName;
-                if (ConnectionUpdatedEvent != null)
-                {
-                    ConnectionUpdatedEvent(); // raise connection updated event
-                }
+                ConnectionUpdatedEvent?.Invoke(); // raise connection updated event
                 this.comLoop.RunWorkerAsync();
             }
             else

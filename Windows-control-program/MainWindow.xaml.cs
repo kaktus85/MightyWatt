@@ -57,6 +57,7 @@ namespace MightyWatt
         // disconnects load when the program exits
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
+            statisticsWindow?.Close();
             load.Disconnect();
             base.OnClosing(e);
         }
@@ -824,6 +825,7 @@ namespace MightyWatt
             if (dialog.ShowDialog() == true)
             {
                 load.NewFile(dialog.FileName);
+                statisticsWindow?.SetFile(load.LogFile);
                 updateGui();
             }
         }
@@ -832,6 +834,7 @@ namespace MightyWatt
         private void menuItemLoggingCloseFile_Click(object sender, RoutedEventArgs e)
         {
             load.CloseFile();
+            statisticsWindow?.SetFile(null);
             updateGui();
         }
 

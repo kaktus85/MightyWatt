@@ -22,30 +22,49 @@ namespace MightyWatt
             startTime = DateTime.Now;
             file.AutoFlush = true;
             file.WriteLine("# MightyWatt Log File");
-            file.WriteLine("# Started on\t{0}\t{1}", startTime.ToShortDateString(), startTime.ToLongTimeString());
-            file.WriteLine("# Current [A]\tVoltage [V]\tTime since start [s]\tTemperature [deg C]\tLocal[l]/Remote[r]");
-         }
+            file.WriteLine("# Started on" + delimiter + "{0}" + delimiter + "{1}", startTime.ToShortDateString(), startTime.ToLongTimeString());
+            file.WriteLine("# Current [A]" + delimiter + "Voltage [V]" + delimiter + "Temperature [deg C]" + delimiter + "Local[l]/Remote[r]" + delimiter + "Time since start [s]" + delimiter + "System timestamp");
+        }
 
         // closes the file
         public void Close()
         {
             file.Close();
-            this.filePath = null;
+            filePath = null;
         }
 
         // writes a single line of load data to the file
         public void WriteData(double current, double voltage, double temperature, bool remote)
         {
-            string lr;
-            if (remote)
+            if (!string.IsNullOrEmpty(FilePath))
             {
-                lr = "r";
+                StringBuilder sb = new StringBuilder();
+                string lr;
+                DateTime now = DateTime.Now;
+                if (remote)
+                {
+                    lr = "r";
+                }
+                else
+                {
+                    lr = "l";
+                }
+                sb.Append(current.ToString(NUMBER_FORMAT));
+                sb.Append(delimiter);
+                sb.Append(voltage.ToString(NUMBER_FORMAT));
+                sb.Append(delimiter);
+                sb.Append(temperature.ToString(TEMPERATURE_NUMBER_FORMAT));
+                sb.Append(delimiter);
+                sb.Append(lr);
+                sb.Append(delimiter);
+                sb.Append(elapsedSeconds());
+                sb.Append(delimiter);
+                sb.Append(" ");
+                sb.Append(now.ToLongTimeString());
+                sb.Append(":");
+                sb.Append(now.Millisecond);
+                file.WriteLine(sb.ToString());
             }
-            else
-            {
-                lr = "l";
-            }
-            file.WriteLine("{0}\t{1}\t{2}\t{3}\t{4}", current.ToString(NUMBER_FORMAT), voltage.ToString(NUMBER_FORMAT), elapsedSeconds(), temperature.ToString(TEMPERATURE_NUMBER_FORMAT), lr);
         }
 
         public void WriteLine(string line)
@@ -74,7 +93,7 @@ namespace MightyWatt
         {
             get
             {
-                return this.filePath;
+                return filePath;
             }
         }
     }
